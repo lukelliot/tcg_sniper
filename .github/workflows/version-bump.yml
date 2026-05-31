@@ -1,0 +1,48 @@
+name: Version bump
+
+# Bump extension/manifest.json on the PR branch from the PR title's
+# conventional-commit prefix, so the bump rides into main with the squash-merge.
+# No PAT needed: the push uses GITHUB_TOKEN on the (unprotected) PR branch, and
+# the version lands on main through the normal verified squash-merge.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    # Same-repo PRs only — forked PRs get a read-only token and can't push.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apply version bump
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          git fetch origin main --depth=1
+          BASE_VERSION=$(git show origin/main:extension/manifest.json | jq -r .version)
+          echo "main version: $BASE_VERSION | PR title: $PR_TITLE"
+          BASE_VERSION="$BASE_VERSION" node scripts/bump-manifest.mjs
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- extension/manifest.json; then
+            echo "No version change to commit."
+            exit 0
+          fi
+          NEW=$(jq -r .version extension/manifest.json)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add extension/manifest.json
+          git commit -m "chore(release): set version to $NEW"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}

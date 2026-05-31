@@ -455,6 +455,8 @@ function flash(msg, variant = 'success') {
 }
 
 async function load() {
+  document.getElementById('version').textContent = `v${chrome.runtime.getManifest().version}`;
+
   const co = await get(KEY.CONFIG_OVERRIDE, {});
   const po = await get(KEY.PRODUCTS_OVERRIDE, {});
   paused = await get(KEY.PAUSED, false);

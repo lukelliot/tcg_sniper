@@ -10,6 +10,7 @@
       max-width: 760px; margin: 0 auto; padding: 24px;
     }
     h1 { font-size: 20px; margin: 0 0 4px; }
+    h1 .version { font-size: 12px; font-weight: 500; opacity: 0.55; vertical-align: middle; margin-left: 8px; }
     h2 { font-size: 15px; margin: 28px 0 8px; border-bottom: 1px solid #8884; padding-bottom: 4px; }
     .sub { opacity: 0.7; margin: 0 0 16px; }
     .row { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; margin: 6px 0; }
@@ -47,7 +48,7 @@
   </style>
 </head>
 <body>
-  <h1>TCGplayer Price Watch</h1>
+  <h1>TCGplayer Price Watch<span class="version" id="version"></span></h1>
   <p class="sub">Settings are stored as overrides on top of the file defaults. They take effect on the next poll.</p>
 
   <div class="bar">

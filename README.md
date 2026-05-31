@@ -73,11 +73,22 @@ Set `useNtfy: true` and a `ntfyTopic` in the config, then subscribe to that topi
 
 ## Development
 
-The pure price/history math in [`extension/lib/pricing.js`](extension/lib/pricing.js) has no `chrome` dependency and is unit-tested:
+The pure price/history math in [`extension/lib/pricing.js`](extension/lib/pricing.js) has no `chrome` dependency and is unit-tested, as are the version helpers in [`scripts/version.mjs`](scripts/version.mjs):
 
 ```sh
 npm test   # node --test
 ```
+
+GitHub Actions runs the suite on every PR and on `main` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+
+### Versioning & releases
+
+Versioning follows [Conventional Commits](https://www.conventionalcommits.org/) and is automated — `manifest.json`'s `version` is never bumped by hand:
+
+- On each PR, [`version-bump.yml`](.github/workflows/version-bump.yml) reads the **PR title** (which becomes the squash-merge subject) and bumps `manifest.json` on the PR branch — `feat:` → minor, `fix:`/`perf:` → patch, a `!` or `BREAKING CHANGE` → major, anything else (`docs:`, `chore:`, `ci:`, …) → no bump. The bump rides into `main` with the squash-merge, so the version lands on a verified commit with no extra tokens or protection changes.
+- When the bump lands on `main`, [`release.yml`](.github/workflows/release.yml) tags it `vX.Y.Z` and cuts a GitHub Release with auto-generated notes.
+
+The displayed version in the options header reads straight from the manifest at runtime, so it always matches the installed build.
 
 ## Notes
 
