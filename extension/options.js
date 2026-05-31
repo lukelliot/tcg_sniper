@@ -261,6 +261,36 @@ const CONFIG_GROUPS = [
   { title: 'Tabs & block recovery', keys: ['reopenIfClosed', 'flaggedBackoffMin', 'flaggedMaxBackoffMin'] },
 ];
 
+// Short, plain-English help per knob (shown under each field).
+const CONFIG_HINTS = {
+  basePeriodMin: 'Minutes between polls (Chrome floor is 1). e.g. 5',
+  maxPeriodMin: 'Backoff ceiling — base × multiplier never exceeds this. e.g. 16',
+  backoffAfterEmpties: 'Empty renders in a row before slowing down (likely a challenge). e.g. 3',
+  backoffGrowth: 'Multiply the poll interval by this each troubled cycle. e.g. 1.5',
+  relaxAfterClean: 'Clean cycles in a row before easing back toward the base period. e.g. 30',
+  relaxFactor: 'Multiplier applied when relaxing (decays toward 1). e.g. 0.8',
+  reAlertMinHours: 'Shortest gap before re-pinging the same level. e.g. 1',
+  reAlertMaxHours: 'Longest re-ping gap; set 0 to alert only on the crossing. e.g. 5',
+  trendDropPct: 'Ping when Market Price falls this fraction from the anchor. e.g. 0.05 = 5%',
+  trendRiseReset: 'Rebaseline the anchor if the price recovers this much. e.g. 0.05 = 5%',
+  stallHours: 'Flat this long after a decline → a "possible floor" ping. e.g. 24',
+  trendWindowsDays: 'Look-back windows (days) reported in alerts. e.g. 2, 3, 5',
+  historyMinIntervalMinutes: 'Minimum spacing between stored history samples. e.g. 20',
+  stealFactor: 'Steal alert when lowest ≤ median × this. e.g. 0.65 = 35% under',
+  stealMinListings: 'Minimum listings needed to compute a median. e.g. 4',
+  stealVelocityWindowHours: 'Window over which stock drain is measured. e.g. 12',
+  stealVelocityThreshold: 'Quantity drop over the window that counts as "selling fast". e.g. 0.30 = 30%',
+  stealVelocityBoost: 'Loosen the steal factor by this while selling fast (capped 0.95). e.g. 0.10',
+  healthAlertAfter: 'Polls that parse nothing before a "scraper likely broken" alert. e.g. 3',
+  dailySnapshotHour: 'Local hour 0–23 for the daily digest; leave blank to disable. e.g. 8',
+  useDesktop: 'Show Chrome desktop notifications.',
+  useNtfy: 'Also push alerts via ntfy.sh.',
+  ntfyTopic: 'Your ntfy.sh topic to publish to. e.g. tcgplayer-sniper',
+  reopenIfClosed: 'Reopen a watched product tab if it gets closed (pinned, background).',
+  flaggedBackoffMin: 'Starting backoff when blocked (/uhoh); doubles per block. e.g. 10',
+  flaggedMaxBackoffMin: 'Cap on the blocked-state backoff. e.g. 120',
+};
+
 function configRow(key, def, current) {
   const row = document.createElement('div');
   row.className = 'row';
@@ -298,6 +328,13 @@ function configRow(key, def, current) {
     row.appendChild(wrap);
   } else {
     row.appendChild(input);
+  }
+
+  if (CONFIG_HINTS[key]) {
+    const hint = document.createElement('div');
+    hint.className = 'hint';
+    hint.textContent = CONFIG_HINTS[key];
+    row.appendChild(hint);
   }
   return row;
 }

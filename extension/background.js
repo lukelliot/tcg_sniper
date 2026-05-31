@@ -36,3 +36,8 @@ chrome.runtime.onMessage.addListener((msg) => {
     evaluate(msg).catch(console.error);
   }
 });
+
+// Clicking the toolbar icon opens the settings page.
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});

@@ -6,6 +6,7 @@
   "permissions": ["alarms", "notifications", "storage", "tabs", "power"],
   "host_permissions": ["https://www.tcgplayer.com/*", "https://ntfy.sh/*"],
   "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "TCGplayer Price Watch — open settings" },
   "options_ui": { "page": "options.html", "open_in_tab": true },
   "content_scripts": [
     {
