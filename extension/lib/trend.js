@@ -5,54 +5,25 @@
 import { get, set, getConfig } from './storage.js';
 import { KEY, MS, HISTORY } from './constants.js';
 import { notify } from './notify.js';
+import { windowDelta, fmtWindow, trendWindows } from './pricing.js';
 
 // Append one Market Price sample (downsampled), prune to the longest window, return history.
-export async function recordHistory(id, mkt, qty) {
-  const cfg = getConfig();
+// `cfg` is the per-product config, so a product can override trendWindowsDays.
+export async function recordHistory(id, mkt, qty, cfg) {
   const now = Date.now();
   const hist = await get(KEY.hist(id), []);
   const lastT = hist.length ? hist[hist.length - 1].t : 0;
 
-  if (now - lastT >= cfg.historyMinIntervalMinutes * MS.MIN) {
+  if (now - lastT >= getConfig().historyMinIntervalMinutes * MS.MIN) {
     hist.push({ t: now, mkt, qty });
   }
 
-  const maxDays = cfg.trendWindowsDays.length ? Math.max(...cfg.trendWindowsDays) : 5;
+  const windows = trendWindows(cfg, getConfig());
+  const maxDays = windows.length ? Math.max(...windows) : 5;
   const cutoff = now - maxDays * HISTORY.RETENTION_FACTOR * MS.DAY;
   const pruned = hist.filter((h) => h.t >= cutoff).slice(-HISTORY.MAX_SAMPLES);
   await set({ [KEY.hist(id)]: pruned });
   return pruned;
-}
-
-// Change in Market Price over the last `hours`, or null if not enough history yet.
-export function windowDelta(hist, hours) {
-  if (hist.length < 2) {
-    return null;
-  }
-
-  const cutoff = Date.now() - hours * MS.HOUR;
-  const old = hist.find((h) => h.t >= cutoff && h.mkt != null);
-  const cur = [...hist].reverse().find((h) => h.mkt != null);
-
-  if (!old || !cur || old === cur || old.mkt == null) {
-    return null;
-  }
-
-  const abs = +(cur.mkt - old.mkt).toFixed(2);
-  return {
-    abs,
-    pct: abs / old.mkt,
-    hours: (cur.t - old.t) / MS.HOUR,
-  };
-}
-
-function fmtWindow(days, wd) {
-  const label = `${days}d`;
-  if (!wd) {
-    return `${label}: collecting`;
-  }
-  const dir = wd.abs <= 0 ? 'down' : 'up';
-  return `${label}: ${dir} ${Math.abs(wd.pct * 100).toFixed(1)}%`;
 }
 
 // Returns the context as an array of pieces. Callers join with '\n' (one metric
@@ -84,7 +55,7 @@ export function buildContext(market, hist, cfg) {
     const s = market.sellers != null ? `Sellers ${market.sellers}` : null;
     lines.push([q, s].filter(Boolean).join(' | '));
   }
-  for (const d of getConfig().trendWindowsDays) {
+  for (const d of trendWindows(cfg, getConfig())) {
     lines.push(fmtWindow(d, windowDelta(hist, d * 24)));
   }
   return lines;

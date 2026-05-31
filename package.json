@@ -1,0 +1,10 @@
+{
+  "name": "tcg-sniper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests for the TCGplayer Price Watch extension's pure pricing logic.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

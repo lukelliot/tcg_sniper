@@ -182,6 +182,15 @@
     const [listings] = await Promise.all([waitForListings(), waitForMarket()]);
     const market = scrapeMarket();
 
+    // Structural signals for the worker's selector-health check: did the page's
+    // containers render even though our fields may not have parsed?
+    const diag = {
+      listingNodes: document.querySelectorAll(SELECTORS.listingItem).length,
+      marketPanel: !!document.querySelector(SELECTORS.upperPrice),
+      listingsParsed: listings.length,
+      marketParsed: market.marketPrice != null,
+    };
+
     // If the extension was reloaded/updated while this tab stayed open, this
     // (old) content script's context is invalidated and chrome.runtime is gone.
     // Guard + swallow it: harmless, and the next alarm-driven reload injects a
@@ -193,6 +202,7 @@
           url: location.href,
           listings,
           market,
+          diag,
         });
       }
     } catch (e) {

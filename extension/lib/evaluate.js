@@ -6,10 +6,12 @@ import { get, set, getConfig, getProducts, applyOverrides } from './storage.js';
 import { KEY, STATE, REGEX, MS } from './constants.js';
 import { notify } from './notify.js';
 import { recordHistory, buildContext, checkTrend } from './trend.js';
+import { checkScrapeHealth } from './health.js';
+import { lowsDescending, deepestTier, medianOfTotals, quantityVelocity } from './pricing.js';
 import { ensureAlarm } from './scheduler.js';
 import { log, warn } from './log.js';
 
-export async function evaluate({ url, listings, market }) {
+export async function evaluate({ url, listings, market, diag }) {
   await applyOverrides();
 
   if (await get(KEY.PAUSED, false)) {
@@ -27,6 +29,10 @@ export async function evaluate({ url, listings, market }) {
 
   await set({ [KEY.url(id)]: url }); // remember where to reopen if the tab closes
 
+  // Detect selector breakage (page rendered but our fields didn't parse) before
+  // the empty-render early return, so a break that yields zero listings is caught.
+  await checkScrapeHealth(id, cfg, diag, url);
+
   const mult = await applyAdaptivePeriod(id, listings);
   if (!listings.length) {
     warn(`${cfg.name}: empty render — period x${mult.toFixed(2)} (possible challenge).`);
@@ -34,7 +40,7 @@ export async function evaluate({ url, listings, market }) {
   }
 
   // Records the REAL scraped values only.
-  const hist = await recordHistory(id, market.marketPrice, market.quantity);
+  const hist = await recordHistory(id, market.marketPrice, market.quantity, cfg);
   const mkt = await carryForwardMarket(id, market);
 
   const ctxLines = buildContext(mkt, hist, cfg);
@@ -51,7 +57,7 @@ export async function evaluate({ url, listings, market }) {
   const lowest = pool.reduce((a, b) => (b.total < a.total ? b : a));
   const price = lowest.total;
 
-  const stealFired = await checkSteal(id, cfg, pool, lowest, price, ctx, url);
+  const stealFired = await checkSteal(id, cfg, pool, lowest, price, hist, ctx, url);
   await checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url);
 
   const lead = `${cfg.name}: $${price.toFixed(2)} from ${lowest.seller}`;
@@ -155,19 +161,26 @@ async function checkFloor(id, cfg, listings, ctx, url) {
 }
 
 // Lowest listing far enough under the listing median to look like a steal.
-// Returns whether the price is in steal range (suppresses the DROP alert).
-async function checkSteal(id, cfg, pool, lowest, price, ctx, url) {
+// Velocity-aware: when stock is draining fast the steal factor is loosened so a
+// disappearing deal still trips. Returns whether the price is in steal range
+// (which suppresses the DROP alert).
+async function checkSteal(id, cfg, pool, lowest, price, hist, ctx, url) {
   const c = getConfig();
   if (pool.length < c.stealMinListings) {
     return false;
   }
 
-  const sorted = pool.map((l) => l.total).sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)];
-  if (price <= median * c.stealFactor) {
+  const median = medianOfTotals(pool.map((l) => l.total));
+
+  const vel = quantityVelocity(hist, c.stealVelocityWindowHours);
+  const sellingFast = vel >= c.stealVelocityThreshold;
+  const factor = sellingFast ? Math.min(0.95, c.stealFactor + c.stealVelocityBoost) : c.stealFactor;
+
+  if (price <= median * factor) {
     if (await get(KEY.steal(id), 0) !== price) {
       const gapPct = ((1 - price / median) * 100).toFixed(0);
-      notify(`${cfg.name}: POSSIBLE STEAL $${price.toFixed(2)}`, `${gapPct}% under the $${median.toFixed(2)} listing median, from ${lowest.seller}.${ctx}`, url);
+      const velNote = sellingFast ? ` Selling fast: stock down ${(vel * 100).toFixed(0)}% in ${c.stealVelocityWindowHours}h.` : '';
+      notify(`${cfg.name}: POSSIBLE STEAL $${price.toFixed(2)}`, `${gapPct}% under the $${median.toFixed(2)} listing median, from ${lowest.seller}.${velNote}${ctx}`, url);
       await set({ [KEY.steal(id)]: price });
     }
     return true;
@@ -182,17 +195,8 @@ async function checkSteal(id, cfg, pool, lowest, price, ctx, url) {
 // hedge against setting one buy target too low and missing the slide.
 async function checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url) {
   const c = getConfig();
-  const lows = (Array.isArray(cfg.lowPrices)
-    ? [...cfg.lowPrices]
-    : (cfg.lowPrice != null ? [cfg.lowPrice] : [])
-  ).sort((a, b) => b - a); // high -> low; index 0 is the shallowest marker
-
-  let lowTier = -1; // deepest marker index currently crossed (price <= marker)
-  for (let i = 0; i < lows.length; i++) {
-    if (price <= lows[i]) {
-      lowTier = i;
-    }
-  }
+  const lows = lowsDescending(cfg); // high -> low; index 0 is the shallowest marker
+  const lowTier = deepestTier(price, lows); // deepest marker crossed, or -1
   const highHit = cfg.highPrice != null && price >= cfg.highPrice;
 
   const lastLowTier = await get(KEY.lowTier(id), -1);

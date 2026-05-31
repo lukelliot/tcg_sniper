@@ -42,6 +42,16 @@ export const DEFAULT_CONFIG = {
   stealFactor: 0.65,                // lowest listing <= median x this => steal alert
   stealMinListings: 4,              // need at least this many listings to form a median
 
+  // VELOCITY-AWARE steals: when stock is draining fast a cheap listing won't
+  // last, so loosen the steal factor to catch it sooner.
+  stealVelocityWindowHours: 12,     // window over which quantity drop is measured
+  stealVelocityThreshold: 0.30,     // qty fell this fraction over the window => "selling fast"
+  stealVelocityBoost: 0.10,         // add this to stealFactor while selling fast (capped at 0.95)
+
+  // SELECTOR HEALTH: if the page renders but our selectors parse nothing this
+  // many polls in a row, alert that the scraper is likely broken.
+  healthAlertAfter: 3,
+
   dailySnapshotHour: 8,             // local hour (0–23): once-a-day summary at start of day; null to disable
 
   ntfyTopic: "tcgplayer-sniper",    // your ntfy.sh topic (optional)

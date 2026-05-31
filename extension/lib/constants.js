@@ -67,4 +67,6 @@ export const KEY = {
   declining: (id) => `declining_${id}`,
   lastDrop: (id) => `lastDrop_${id}`,
   snapDay: (id) => `snapDay_${id}`,
+  unhealthy: (id) => `unhealthy_${id}`,
+  healthAlerted: (id) => `healthAlerted_${id}`,
 };
