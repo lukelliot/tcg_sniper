@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>TCGplayer Price Watch — Settings</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font: 14px/1.5 system-ui, -apple-system, Segoe UI, sans-serif;
+      max-width: 760px; margin: 0 auto; padding: 24px;
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 15px; margin: 28px 0 8px; border-bottom: 1px solid #8884; padding-bottom: 4px; }
+    .sub { opacity: 0.7; margin: 0 0 16px; }
+    .row { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; align-items: center; margin: 6px 0; }
+    .row label { font-weight: 500; }
+    .row .hint { grid-column: 2; font-size: 12px; opacity: 0.65; margin-top: -2px; }
+    input[type="text"], input[type="number"] { padding: 5px 7px; border: 1px solid #8886; border-radius: 5px; background: transparent; color: inherit; width: 100%; box-sizing: border-box; }
+    input[type="checkbox"] { width: 16px; height: 16px; }
+    .product { border: 1px solid #8884; border-radius: 8px; padding: 14px 16px; margin: 12px 0; position: relative; }
+    .product .remove { position: absolute; top: 10px; right: 12px; }
+    button { font: inherit; padding: 6px 14px; border-radius: 6px; border: 1px solid #8886; background: #8881; color: inherit; cursor: pointer; }
+    button:hover { background: #8883; }
+    button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+    button.danger { color: #dc2626; }
+    .bar { display: flex; gap: 10px; align-items: center; margin: 24px 0 8px; flex-wrap: wrap; }
+    #status { opacity: 0; transition: opacity 0.2s; font-weight: 500; }
+    #status.show { opacity: 1; }
+    #pauseState { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>TCGplayer Price Watch</h1>
+  <p class="sub">Settings are stored as overrides on top of the file defaults. They take effect on the next poll.</p>
+
+  <div class="bar">
+    <button id="pauseBtn" type="button"></button>
+    <span id="pauseState"></span>
+  </div>
+
+  <h2>Products</h2>
+  <p class="sub">Find a product's id in its TCGplayer URL: <code>/product/<b>693209</b>/…</code></p>
+  <div id="products"></div>
+  <button id="addProduct" type="button">+ Add product</button>
+
+  <h2>Global settings</h2>
+  <div id="config"></div>
+
+  <div class="bar">
+    <button id="save" class="primary" type="button">Save</button>
+    <button id="reset" class="danger" type="button">Reset to defaults</button>
+    <span id="status"></span>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
