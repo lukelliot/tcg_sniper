@@ -78,6 +78,7 @@ function readProductCards() {
 // bars — the top bar is for product actions, the bottom bar for destructive ones.
 const PRODUCT_ACTIONS = [
   { label: 'Save', primary: true, handler: saveProductCard },
+  { label: 'Open', handler: openProductPage },
   { label: 'Refresh', handler: refreshProductTabs },
   { label: 'Focus tab', handler: focusProductTab },
 ];
@@ -124,6 +125,20 @@ async function refreshProductTabs(card) {
   }
   await Promise.all(tabs.map((t) => chrome.tabs.reload(t.id)));
   flash(`Refreshed ${tabs.length} tab${tabs.length > 1 ? 's' : ''} for ${id}.`);
+}
+
+// Open the product's TCGplayer page in a new tab. Prefer the last-known URL we
+// scraped (full slug); otherwise the canonical /product/<id> URL, which
+// TCGplayer redirects to the slug.
+async function openProductPage(card) {
+  const id = cardId(card);
+  if (!id) {
+    flash('Set a product id first.', 'warn');
+    return;
+  }
+  const stored = await get(KEY.url(id), null);
+  const url = stored || `https://www.tcgplayer.com/product/${id}`;
+  await chrome.tabs.create({ url });
 }
 
 async function focusProductTab(card) {
