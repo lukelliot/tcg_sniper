@@ -27,6 +27,10 @@ export async function evaluate({ url, listings, market, diag }) {
     return; // not (or no longer) a watched product
   }
 
+  if (await get(KEY.productPaused(id), false)) {
+    return; // this product is individually paused — no processing or alerts
+  }
+
   await set({ [KEY.url(id)]: url }); // remember where to reopen if the tab closes
 
   // Detect selector breakage (page rendered but our fields didn't parse) before

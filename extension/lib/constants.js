@@ -51,6 +51,7 @@ export const KEY = {
   FLAGGED_BACKOFF: 'flaggedBackoff',
   FLAGGED_SINCE: 'flaggedSince',
 
+  productPaused: (id) => `productPaused_${id}`,
   url: (id) => `url_${id}`,
   empties: (id) => `empties_${id}`,
   mult: (id) => `mult_${id}`,

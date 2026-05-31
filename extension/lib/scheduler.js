@@ -54,8 +54,19 @@ export async function handleTick(a) {
   }
 
   if (watched.length) {
-    reloadWatched(watched);
-    return;
+    const active = [];
+    for (const t of watched) {
+      const pid = (t.url.match(REGEX.PRODUCT_ID) || [])[1];
+      if (!(await get(KEY.productPaused(pid), false))) {
+        active.push(t);
+      }
+    }
+    if (active.length) {
+      reloadWatched(active);
+    } else {
+      log('all open watched products are paused — skipping reloads.');
+    }
+    return; // tabs are open, just paused — don't fall through to reopen
   }
 
   await reopenClosedIfNeeded();
@@ -124,6 +135,9 @@ async function reopenClosedIfNeeded() {
 
   const products = getProducts();
   for (const id of Object.keys(products)) {
+    if (await get(KEY.productPaused(id), false)) {
+      continue; // paused product — leave it closed
+    }
     const url = await get(KEY.url(id), null);
     if (url) {
       chrome.tabs.create({

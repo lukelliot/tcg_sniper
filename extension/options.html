@@ -21,6 +21,9 @@
     input[type="checkbox"] { width: 16px; height: 16px; }
     .product { border: 1px solid #8884; border-radius: 8px; margin: 12px 0; overflow: hidden; }
     .product .fields { padding: 14px 16px; }
+    .product.paused { border-color: #d9770699; }
+    .product.paused .fields { opacity: 0.5; }
+    .product.paused .tile-bar.top::after { content: "PAUSED"; margin-left: auto; align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: #d97706; }
     .tile-bar { display: flex; gap: 8px; padding: 9px 14px; flex-wrap: wrap; align-items: center; }
     .tile-bar.top { border-bottom: 1px solid #8884; background: #8881; }
     .tile-bar.bottom { border-top: 1px solid #8884; justify-content: flex-end; }

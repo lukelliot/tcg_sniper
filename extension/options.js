@@ -81,6 +81,9 @@ const PRODUCT_ACTIONS = [
   { label: 'Open', handler: openProductPage },
   { label: 'Refresh', handler: refreshProductTabs },
   { label: 'Focus tab', handler: focusProductTab },
+  // Pause is a toggle: its label/appearance reflect stored per-product state, so
+  // it carries a `refresh` hook that actionBar calls on render and after click.
+  { handler: toggleProductPause, refresh: syncPauseButton },
 ];
 const PRODUCT_DESTRUCTIVE = [
   { label: 'Remove', danger: true, handler: removeProductCard },
@@ -154,6 +157,30 @@ async function focusProductTab(card) {
   }
 }
 
+// Per-product pause. Independent of the product config override (so Save/Reset
+// of the fields doesn't clobber it) and of the global pause; the scheduler skips
+// reloads/reopens for a paused product and evaluate() drops its scrapes.
+async function toggleProductPause(card) {
+  const id = cardId(card);
+  if (!id) {
+    flash('Set a product id first.', 'warn');
+    return;
+  }
+  const now = !(await get(KEY.productPaused(id), false));
+  await set({ [KEY.productPaused(id)]: now });
+  flash(now ? `Paused ${id} — no reloads or alerts.` : `Resumed ${id}.`, now ? 'warn' : 'success');
+}
+
+// Reflect the stored pause state on the button and dim the tile when paused.
+// Called on render and again after the toggle handler runs.
+async function syncPauseButton(button, card) {
+  const id = cardId(card);
+  const paused = id ? await get(KEY.productPaused(id), false) : false;
+  button.textContent = paused ? 'Resume' : 'Pause';
+  button.classList.toggle('danger', paused);
+  card.classList.toggle('paused', paused);
+}
+
 // Stop watching: a default id becomes a null tombstone; anything else just
 // drops its override. Brand-new unsaved cards (no id yet) only leave the DOM.
 async function removeProductCard(card) {
@@ -177,14 +204,24 @@ function actionBar(card, actions, cls) {
   for (const a of actions) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = a.label;
+    if (a.label) {
+      b.textContent = a.label;
+    }
     if (a.primary) {
       b.classList.add('primary');
     }
     if (a.danger) {
       b.classList.add('danger');
     }
-    b.onclick = () => a.handler(card);
+    if (a.refresh) {
+      a.refresh(b, card); // set the initial label/appearance from stored state
+    }
+    b.onclick = async () => {
+      await a.handler(card);
+      if (a.refresh) {
+        a.refresh(b, card); // re-sync after a toggle changes stored state
+      }
+    };
     bar.appendChild(b);
   }
   return bar;
@@ -455,6 +492,10 @@ async function save() {
 }
 
 async function reset() {
+  // Drop overrides and clear runtime pause state (global + every per-product flag).
+  const all = await new Promise((r) => chrome.storage.local.get(null, r));
+  const pausedKeys = Object.keys(all).filter((k) => k.startsWith('productPaused_'));
+  await new Promise((r) => chrome.storage.local.remove(pausedKeys, r));
   await set({ [KEY.CONFIG_OVERRIDE]: {}, [KEY.PRODUCTS_OVERRIDE]: {}, [KEY.PAUSED]: false });
   paused = false;
   await load();
