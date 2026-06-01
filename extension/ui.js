@@ -1,4 +1,4 @@
-// options.js — the settings UI. It reads and writes the SAME storage overrides
+// ui.js — the settings UI. It reads and writes the SAME storage overrides
 // (configOverride / productsOverride / paused) that the service-worker console
 // controls use, so the two stay in sync. The form is generated from the file
 // defaults, so adding a knob in config.js automatically surfaces here. Changes

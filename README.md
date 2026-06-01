@@ -20,7 +20,7 @@ chrome.alarms ──tick──▶ background.js (service worker)
 
 - **`background.js`** — a thin service-worker entry point. It wires up the listeners (alarm, message, install/startup) and delegates to focused ES modules under [`extension/lib/`](extension/lib): `scheduler.js` (alarm cadence, tab reload/reopen, block backoff), `evaluate.js` (the per-scrape pipeline), `trend.js`, `pricing.js` (pure price/history math), `health.js` (selector health-check), `notify.js`, `storage.js`, `config.js`, and `controls.js` (console commands). On each alarm it reloads the watched tab(s); when a scrape comes back, `evaluate()` runs thresholds, steals, and trend, fires notifications, and stores price history. All config and runtime state live in `chrome.storage.local`.
 - **`content.js`** — injected into each `tcgplayer.com/product/*` page. Its only job is to wait for the listings and price-points panel to render, scrape them (plus structural diagnostics for the health-check), and message the result back. It schedules nothing.
-- **`options.html` / `options.js`** — a settings UI (opens in a tab) for editing products and global config without the console. See [Configure](#configure).
+- **`ui.html` / `ui.js`** — a settings UI (opens in a tab) for editing products and global config without the console. See [Configure](#configure).
 - **`manifest.json`** — MV3 manifest; permissions: `alarms`, `notifications`, `storage`, `tabs`, `power`.
 
 ## Alerts
