@@ -107,8 +107,11 @@ async function productTabs(id) {
   return tabs.filter((t) => re.test(t.url || ''));
 }
 
-// Save just this product into productsOverride (mirrors setProduct): drop the
-// override when it equals the file default, otherwise store the whole object.
+// Save just this product into productsOverride (mirrors setProduct). Always
+// persist the full object — even when it currently equals the file default — so
+// a product you've explicitly saved is PINNED: a later extension update that
+// ships different file defaults for this id won't silently change your config.
+// (Use Remove, or Reset to defaults, to go back to following the file default.)
 async function saveProductCard(card) {
   const id = cardId(card);
   if (!id) {
@@ -117,11 +120,7 @@ async function saveProductCard(card) {
   }
   const prod = readCard(card);
   const po = await get(KEY.PRODUCTS_OVERRIDE, {});
-  if (DEFAULT_PRODUCTS[id] && eq(prod, DEFAULT_PRODUCTS[id])) {
-    delete po[id];
-  } else {
-    po[id] = prod;
-  }
+  po[id] = prod;
   await set({ [KEY.PRODUCTS_OVERRIDE]: po });
   flash(`Saved ${cardLabel(card)} — applies on the next poll.`);
 }
@@ -285,15 +284,14 @@ function productCard(id, prod) {
   return card;
 }
 
-// Turn the edited effective products back into the minimal override object,
-// mirroring storage.applyOverrides: unchanged defaults are omitted, removed
-// defaults become null tombstones, everything else is stored whole.
+// Turn the edited effective products back into the override object. Every
+// visible product is stored WHOLE — even if it currently equals the file
+// default — so saving PINS it: a later update shipping different defaults won't
+// silently change a product you've saved. Removed defaults become null
+// tombstones. (Reset to defaults clears all of this.)
 function productsToOverride(effective) {
   const po = {};
   for (const [id, prod] of Object.entries(effective)) {
-    if (DEFAULT_PRODUCTS[id] && eq(prod, DEFAULT_PRODUCTS[id])) {
-      continue;
-    }
     po[id] = prod;
   }
   for (const id of Object.keys(DEFAULT_PRODUCTS)) {
