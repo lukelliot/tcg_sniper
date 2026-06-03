@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TCGplayer Price Watch",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Watches the cheapest buyable listing + price trend on chosen TCGplayer products and notifies on threshold/steal/trend events.",
   "permissions": ["alarms", "notifications", "storage", "tabs", "power"],
   "host_permissions": ["https://www.tcgplayer.com/*", "https://ntfy.sh/*"],

@@ -217,21 +217,21 @@ async function checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url
   if (highTier >= 0) {
     if (highTier > lastHighTier) {
       // stepped up to a NEW, higher spike marker
-      notify(`${cfg.name}: SPIKE $${price.toFixed(2)} (marker ${highTier + 1}/${highs.length}, ≥$${highs[highTier]})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: SPIKE $${price.toFixed(2)} (marker ${highTier + 1}/${highs.length}, ≥$${highs[highTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (highTier === lastHighTier && cooldownPassed) {
       // still sitting at the highest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≥$${highs[highTier]} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   } else if (lowTier >= 0 && !stealFired) {
     if (lowTier > lastLowTier) {
       // stepped down to a NEW, deeper marker
-      notify(`${cfg.name}: DROP $${price.toFixed(2)} (marker ${lowTier + 1}/${lows.length}, ≤$${lows[lowTier]})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: DROP $${price.toFixed(2)} (marker ${lowTier + 1}/${lows.length}, ≤$${lows[lowTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (lowTier === lastLowTier && cooldownPassed) {
       // still sitting at the deepest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≤$${lows[lowTier]} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   }
