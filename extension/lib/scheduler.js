@@ -42,6 +42,7 @@ export async function handleTick(a) {
 
   const allTcg = await chrome.tabs.query({ url: URLS.TCG_ALL });
   const uhoh = allTcg.filter((t) => REGEX.UHOH.test(t.url || ''));
+  const notfound = allTcg.filter((t) => REGEX.NOTFOUND.test(t.url || ''));
   const products = getProducts();
   const watched = allTcg.filter((t) => {
     const mm = (t.url || '').match(REGEX.PRODUCT_ID);
@@ -50,6 +51,15 @@ export async function handleTick(a) {
 
   if (uhoh.length) {
     await handleBlocked(uhoh, watched);
+    return;
+  }
+
+  // A /notfound tab is a stray product tab that lost its id (a transient 404 on
+  // reload). Unlike /uhoh it isn't a block, so no backoff — just re-navigate it
+  // back to its product. Return and let the next tick reload the healthy tabs.
+  if (notfound.length) {
+    const recovered = await recoverStrayTabs(notfound, watched);
+    warn(`/notfound on ${notfound.length} tab(s) — ${recovered ? `re-navigating ${recovered} back to their product(s).` : 'no saved product URL to recover to.'}`);
     return;
   }
 
@@ -73,23 +83,31 @@ export async function handleTick(a) {
 }
 
 // TCGplayer redirected us to /uhoh. Slow down (hammering a block makes it
-// worse) and recover by REUSING the blocked tab(s); close any extra /uhoh tabs
-// so they can't accumulate overnight.
-//
-// A /uhoh URL carries no product id, so we can't read which product a blocked
-// tab belonged to. Instead we recover each watched product that currently lacks
-// a live (non-/uhoh) tab back to ITS OWN saved URL, pairing those URLs with the
-// available /uhoh tabs. (The old code reused a single URL — the first product's
-// — for every tab, collapsing every watched tab onto that one product.)
+// worse) and recover by re-navigating the blocked tab(s) back to their
+// products.
 async function handleBlocked(uhoh, watched) {
   const c = getConfig();
-  const products = getProducts();
 
   let fb = await get(KEY.FLAGGED_BACKOFF, 0);
   fb = fb ? Math.min(fb * 2, c.flaggedMaxBackoffMin) : c.flaggedBackoffMin;
   const since = (await get(KEY.FLAGGED_SINCE, null)) || Date.now();
   await set({ [KEY.FLAGGED_BACKOFF]: fb, [KEY.FLAGGED_SINCE]: since });
   ensureAlarm(fb);
+
+  const recovered = await recoverStrayTabs(uhoh, watched);
+
+  const downMin = ((Date.now() - since) / MS.MIN).toFixed(0);
+  warn(`FLAGGED (/uhoh) — blocked ~${downMin}m so far. Backing off to ${fb}m and ${recovered ? `retrying ${recovered} page(s) now` : 'waiting (no saved product URL to retry)'}.`);
+}
+
+// Re-point stray TCGplayer tabs (ones that lost their product id — /uhoh or
+// /notfound) back to watched products. A stray URL carries no id, so we can't
+// tell which product it was; instead we recover each watched product that
+// currently lacks a live tab to ITS OWN saved URL, pairing those URLs with the
+// available stray tabs. Surplus strays (more than products needing recovery)
+// are closed so they can't accumulate. Returns how many tabs were re-navigated.
+async function recoverStrayTabs(strays, watched) {
+  const products = getProducts();
 
   // Products that still have a healthy product tab don't need recovery.
   const liveIds = new Set(watched.map((t) => (t.url.match(REGEX.PRODUCT_ID) || [])[1]));
@@ -106,21 +124,18 @@ async function handleBlocked(uhoh, watched) {
     }
   }
 
-  // Point each blocked tab at its own product; close any surplus /uhoh tabs.
   let recovered = 0;
-  for (let i = 0; i < uhoh.length; i++) {
+  for (let i = 0; i < strays.length; i++) {
     try {
       if (i < recoverUrls.length) {
-        await chrome.tabs.update(uhoh[i].id, { url: recoverUrls[i] });
+        await chrome.tabs.update(strays[i].id, { url: recoverUrls[i] });
         recovered++;
       } else {
-        await chrome.tabs.remove(uhoh[i].id);
+        await chrome.tabs.remove(strays[i].id);
       }
     } catch (e) { /* tab already gone */ }
   }
-
-  const downMin = ((Date.now() - since) / MS.MIN).toFixed(0);
-  warn(`FLAGGED (/uhoh) — blocked ~${downMin}m so far. Backing off to ${fb}m and ${recovered ? `retrying ${recovered} page(s) now` : 'waiting (no saved product URL to retry)'}.`);
+  return recovered;
 }
 
 // Reload at most one tab per product id — duplicate tabs (e.g. leftovers from an

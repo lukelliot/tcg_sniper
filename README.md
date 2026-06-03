@@ -36,6 +36,7 @@ chrome.alarms ──tick──▶ background.js (service worker)
 - **Durable scheduling** — the alarm fires on its period regardless of page/network state; a failed load just gets retried next tick.
 - **Adaptive backoff** — repeated empty renders (a likely challenge) slow the poll up to `maxPeriodMin`; a run of clean cycles relaxes it back toward the base.
 - **Block recovery** — if TCGplayer redirects to `/uhoh`, the poll backs off (10 → 20 → … → 120 min) and recovers by reusing the blocked tab rather than hammering or spawning new ones.
+- **Stray-tab recovery** — a tab that loses its product id (a `/uhoh` block or a transient `/notfound` 404) is re-navigated back to its product's last known URL; `/notfound` recovers immediately (no backoff), and surplus stray tabs are closed instead of left dangling.
 - **Self-healing tabs** — if a watched tab is closed or discarded, it's reopened (pinned, background) from the last known URL.
 - **Carry-forward** — late-rendering Market Price / quantity fields fall back to the last good reading per field so alerts don't blank out or show 0.
 - **Selector health-check** — if a page renders but our selectors parse nothing for `healthAlertAfter` polls in a row, you get a one-time alert that the scraper is likely broken (TCGplayer changed their markup), instead of the watch silently going dark.

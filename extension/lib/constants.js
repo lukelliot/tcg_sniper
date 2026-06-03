@@ -17,8 +17,9 @@ export const URLS = {
 };
 
 export const REGEX = {
-  PRODUCT_ID: /\/product\/(\d+)/, // captures the numeric product id from a URL
-  UHOH: /tcgplayer\.com\/uhoh/,   // TCGplayer's "you're blocked" redirect
+  PRODUCT_ID: /\/product\/(\d+)/,         // captures the numeric product id from a URL
+  UHOH: /tcgplayer\.com\/uhoh/,           // TCGplayer's "you're blocked" redirect
+  NOTFOUND: /tcgplayer\.com\/notfound/,   // TCGplayer's 404 redirect (a stray, no product id)
 };
 
 // Notification tuning.
