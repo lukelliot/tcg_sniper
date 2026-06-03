@@ -48,6 +48,22 @@ test('highestTier returns the highest crossed spike marker (or -1)', () => {
   assert.equal(highestTier(999, []), -1);    // no markers
 });
 
+// Low-single-digit cards where the cents matter: markers and the tier math must
+// be cent-accurate, not rounded to whole dollars. Listing totals reach the tier
+// functions already rounded to 2 decimals (content.js: +(item+ship).toFixed(2)).
+test('low/high ladders respect fractional (cent) markers', () => {
+  const lows = lowsDescending({ lowPrices: [3.49, 2.99] }); // [3.49, 2.99]
+  assert.deepEqual(lows, [3.49, 2.99]);
+  assert.equal(deepestTier(3.50, lows), -1); // a cent above the shallowest — no hit
+  assert.equal(deepestTier(3.49, lows), 0);  // exactly the shallowest marker
+  assert.equal(deepestTier(3.00, lows), 0);  // between markers
+  assert.equal(deepestTier(2.99, lows), 1);  // crosses the deeper marker
+
+  const highs = highsAscending({ highPrices: [5.25] }); // [5.25]
+  assert.equal(highestTier(5.24, highs), -1); // a cent below — no spike
+  assert.equal(highestTier(5.25, highs), 0);  // exactly the spike marker
+});
+
 test('medianOfTotals matches the middle-of-sorted definition', () => {
   assert.equal(medianOfTotals([10, 30, 20]), 20);
   assert.equal(medianOfTotals([5, 1, 9, 3]), 5); // sorted [1,3,5,9], index floor(4/2)=2
