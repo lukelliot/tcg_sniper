@@ -80,7 +80,7 @@ export async function checkTrend(id, cfg, mkt, ctx, url) {
 
   if (dropPct >= c.trendDropPct) {
     const hrs = (Date.now() - anchor.t) / MS.HOUR;
-    notify(`${cfg.name}: still falling`, `Market down ${(dropPct * 100).toFixed(1)}% over ${hrs.toFixed(1)}h, now $${mkt.toFixed(2)} — likely still finding a floor.${ctx}`, url);
+    notify(`${cfg.name}: falling -${(dropPct * 100).toFixed(1)}%`, `$${mkt.toFixed(2)} now, over ${hrs.toFixed(0)}h.${ctx}`, url);
     await set({ [KEY.anchor(id)]: { price: mkt, t: Date.now() } });
     await set({ [KEY.declining(id)]: true, [KEY.lastDrop(id)]: Date.now() });
     return;
@@ -95,7 +95,7 @@ export async function checkTrend(id, cfg, mkt, ctx, url) {
   if (await get(KEY.declining(id), false)) {
     const flatHrs = (Date.now() - (await get(KEY.lastDrop(id), Date.now()))) / MS.HOUR;
     if (flatHrs >= c.stallHours) {
-      notify(`${cfg.name}: decline stalled`, `Market price has held near $${mkt.toFixed(2)} for ${flatHrs.toFixed(0)}h after falling — may have found its floor. Possible buy window.${ctx}`, url);
+      notify(`${cfg.name}: decline stalled`, `Held near $${mkt.toFixed(2)} for ${flatHrs.toFixed(0)}h.${ctx}`, url);
       await set({ [KEY.declining(id)]: false });
     }
   }

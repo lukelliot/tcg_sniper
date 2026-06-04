@@ -158,7 +158,7 @@ async function checkFloor(id, cfg, listings, ctx, url) {
     return pool;
   }
   if (await get(KEY.state(id), STATE.NORMAL) !== STATE.BELOW_FLOOR) {
-    notify(`${cfg.name}: market below $${cfg.floorPrice} floor`, `All listings under your junk floor — sold out or a real drop. Look manually.${ctx}`, url);
+    notify(`${cfg.name}: below $${cfg.floorPrice.toFixed(2)} floor`, `All listings under your floor — sold out or a real drop.${ctx}`, url);
   }
   await set({ [KEY.state(id)]: STATE.BELOW_FLOOR });
   return null;
@@ -223,21 +223,21 @@ async function checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url
   if (highTier >= 0) {
     if (highTier > lastHighTier) {
       // stepped up to a NEW, higher spike marker
-      notify(`${cfg.name}: SPIKE $${price.toFixed(2)} (marker ${highTier + 1}/${highs.length}, ≥$${highs[highTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: SPIKE ≥$${highs[highTier].toFixed(2)} (${highTier + 1}/${highs.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (highTier === lastHighTier && cooldownPassed) {
       // still sitting at the highest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   } else if (lowTier >= 0 && !stealFired) {
     if (lowTier > lastLowTier) {
       // stepped down to a NEW, deeper marker
-      notify(`${cfg.name}: DROP $${price.toFixed(2)} (marker ${lowTier + 1}/${lows.length}, ≤$${lows[lowTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: DROP ≤$${lows[lowTier].toFixed(2)} (${lowTier + 1}/${lows.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (lowTier === lastLowTier && cooldownPassed) {
       // still sitting at the deepest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   }
@@ -276,5 +276,5 @@ async function maybeDailySnapshot(id, cfg, price, lowest, ctxLines, url) {
   }
   await set({ [KEY.snapDay(id)]: today });
   const lead = `Lowest $${price.toFixed(2)} from ${lowest.seller}`;
-  notify(`${cfg.name}: daily snapshot`, [lead, ...ctxLines].join('\n'), url);
+  notify(`${cfg.name}: snapshot`, [lead, ...ctxLines].join('\n'), url);
 }
