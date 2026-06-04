@@ -61,7 +61,7 @@ export async function evaluate({ url, listings, market, diag }) {
   const lowest = pool.reduce((a, b) => (b.total < a.total ? b : a));
   const price = lowest.total;
 
-  const stealFired = await checkSteal(id, cfg, pool, lowest, price, hist, ctx, url);
+  const stealFired = await checkSteal(id, cfg, pool, lowest, price, hist, mkt, ctx, url);
   await checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url);
 
   const lead = `${cfg.name}: $${price.toFixed(2)} from ${lowest.seller}`;
@@ -158,33 +158,39 @@ async function checkFloor(id, cfg, listings, ctx, url) {
     return pool;
   }
   if (await get(KEY.state(id), STATE.NORMAL) !== STATE.BELOW_FLOOR) {
-    notify(`${cfg.name}: market below $${cfg.floorPrice} floor`, `All listings under your junk floor — sold out or a real drop. Look manually.${ctx}`, url);
+    notify(`${cfg.name}: below $${cfg.floorPrice.toFixed(2)} floor`, `All listings under your floor — sold out or a real drop.${ctx}`, url);
   }
   await set({ [KEY.state(id)]: STATE.BELOW_FLOOR });
   return null;
 }
 
-// Lowest listing far enough under the listing median to look like a steal.
+// Lowest listing far enough under the Market Price to look like a steal.
 // Velocity-aware: when stock is draining fast the steal factor is loosened so a
 // disappearing deal still trips. Returns whether the price is in steal range
 // (which suppresses the DROP alert).
-async function checkSteal(id, cfg, pool, lowest, price, hist, ctx, url) {
+//
+// Baseline is the Market Price; if it hasn't rendered yet (carry-forward null)
+// we fall back to the listing median for this poll so the steal still trips.
+async function checkSteal(id, cfg, pool, lowest, price, hist, mkt, ctx, url) {
   const c = getConfig();
   if (pool.length < c.stealMinListings) {
     return false;
   }
 
-  const median = medianOfTotals(pool.map((l) => l.total));
+  const baseline = mkt.marketPrice != null ? mkt.marketPrice : medianOfTotals(pool.map((l) => l.total));
+  if (baseline == null) {
+    return false;
+  }
 
   const vel = quantityVelocity(hist, c.stealVelocityWindowHours);
   const sellingFast = vel >= c.stealVelocityThreshold;
   const factor = sellingFast ? Math.min(0.95, c.stealFactor + c.stealVelocityBoost) : c.stealFactor;
 
-  if (price <= median * factor) {
+  if (price <= baseline * factor) {
     if (await get(KEY.steal(id), 0) !== price) {
-      const gapPct = ((1 - price / median) * 100).toFixed(0);
+      const gapPct = ((1 - price / baseline) * 100).toFixed(0);
       const velNote = sellingFast ? ` Selling fast: stock down ${(vel * 100).toFixed(0)}% in ${c.stealVelocityWindowHours}h.` : '';
-      notify(`${cfg.name}: POSSIBLE STEAL $${price.toFixed(2)}`, `${gapPct}% under the $${median.toFixed(2)} listing median, from ${lowest.seller}.${velNote}${ctx}`, url);
+      notify(`${cfg.name}: -${gapPct}% STEAL`, `$${price.toFixed(2)} from ${lowest.seller}.${velNote}${ctx}`, url);
       await set({ [KEY.steal(id)]: price });
     }
     return true;
@@ -217,21 +223,21 @@ async function checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url
   if (highTier >= 0) {
     if (highTier > lastHighTier) {
       // stepped up to a NEW, higher spike marker
-      notify(`${cfg.name}: SPIKE $${price.toFixed(2)} (marker ${highTier + 1}/${highs.length}, ≥$${highs[highTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: SPIKE ≥$${highs[highTier].toFixed(2)} (${highTier + 1}/${highs.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (highTier === lastHighTier && cooldownPassed) {
       // still sitting at the highest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   } else if (lowTier >= 0 && !stealFired) {
     if (lowTier > lastLowTier) {
       // stepped down to a NEW, deeper marker
-      notify(`${cfg.name}: DROP $${price.toFixed(2)} (marker ${lowTier + 1}/${lows.length}, ≤$${lows[lowTier].toFixed(2)})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: DROP ≤$${lows[lowTier].toFixed(2)} (${lowTier + 1}/${lows.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     } else if (lowTier === lastLowTier && cooldownPassed) {
       // still sitting at the deepest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)} — $${price.toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
       fired = true;
     }
   }
@@ -270,5 +276,5 @@ async function maybeDailySnapshot(id, cfg, price, lowest, ctxLines, url) {
   }
   await set({ [KEY.snapDay(id)]: today });
   const lead = `Lowest $${price.toFixed(2)} from ${lowest.seller}`;
-  notify(`${cfg.name}: daily snapshot`, [lead, ...ctxLines].join('\n'), url);
+  notify(`${cfg.name}: snapshot`, [lead, ...ctxLines].join('\n'), url);
 }

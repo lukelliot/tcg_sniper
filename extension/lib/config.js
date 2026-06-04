@@ -39,8 +39,8 @@ export const DEFAULT_CONFIG = {
   trendWindowsDays: [2, 3, 5],      // context windows reported in alerts/logs
   historyMinIntervalMinutes: 20,    // downsample stored history (we poll faster than this)
 
-  stealFactor: 0.65,                // lowest listing <= median x this => steal alert
-  stealMinListings: 4,              // need at least this many listings to form a median
+  stealFactor: 0.65,                // lowest listing <= Market Price x this => steal alert
+  stealMinListings: 4,              // need at least this many listings before a steal can fire
 
   // VELOCITY-AWARE steals: when stock is draining fast a cheap listing won't
   // last, so loosen the steal factor to catch it sooner.
