@@ -14,6 +14,7 @@ import {
   windowDelta,
   fmtWindow,
   trendWindows,
+  sellerTrust,
 } from '../extension/lib/pricing.js';
 
 const H = 3.6e6; // ms per hour, matching constants.MS.HOUR
@@ -108,6 +109,27 @@ test('fmtWindow renders direction and magnitude', () => {
   assert.equal(fmtWindow(3, null), '3d: collecting');
   assert.equal(fmtWindow(2, { abs: -10, pct: -0.05 }), '2d: down 5.0%');
   assert.equal(fmtWindow(5, { abs: 12, pct: 0.123 }), '5d: up 12.3%');
+});
+
+test('sellerTrust shows ✅ for badged sellers, then rating and sales (or empty)', () => {
+  assert.equal(
+    sellerTrust({ rating: 100, sales: 1820, badges: ['Gold Star Seller'] }),
+    ' ✅ 100% (1820 sales)',
+  );
+  assert.equal(
+    sellerTrust({ rating: 100, sales: 4, badges: [] }),
+    ' 100% (4 sales)', // no badge — no checkmark
+  );
+  assert.equal(
+    sellerTrust({ rating: 98.5, sales: 412, badges: ['Direct'] }),
+    ' ✅ 98.5% (412 sales)',
+  );
+  assert.equal(
+    sellerTrust({ rating: null, sales: 1820, badges: [] }),
+    ' (1820 sales)', // partial render: rating not yet parsed
+  );
+  assert.equal(sellerTrust({ rating: null, sales: null, badges: [] }), '');
+  assert.equal(sellerTrust(null), '');
 });
 
 test('trendWindows prefers a per-product override, else global', () => {

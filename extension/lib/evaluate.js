@@ -7,7 +7,7 @@ import { KEY, STATE, REGEX, MS } from './constants.js';
 import { notify } from './notify.js';
 import { recordHistory, buildContext, checkTrend } from './trend.js';
 import { checkScrapeHealth } from './health.js';
-import { lowsDescending, deepestTier, highsAscending, highestTier, medianOfTotals, quantityVelocity } from './pricing.js';
+import { lowsDescending, deepestTier, highsAscending, highestTier, medianOfTotals, quantityVelocity, sellerTrust } from './pricing.js';
 import { ensureAlarm } from './scheduler.js';
 import { log, warn } from './log.js';
 
@@ -64,7 +64,7 @@ export async function evaluate({ url, listings, market, diag }) {
   const stealFired = await checkSteal(id, cfg, pool, lowest, price, hist, mkt, ctx, url);
   await checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url);
 
-  const lead = `${cfg.name}: $${price.toFixed(2)} from ${lowest.seller}`;
+  const lead = `${cfg.name}: $${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}`;
   log([lead, ...ctxLines].join(' | '));
 
   await maybeDailySnapshot(id, cfg, price, lowest, ctxLines, url);
@@ -190,7 +190,7 @@ async function checkSteal(id, cfg, pool, lowest, price, hist, mkt, ctx, url) {
     if (await get(KEY.steal(id), 0) !== price) {
       const gapPct = ((1 - price / baseline) * 100).toFixed(0);
       const velNote = sellingFast ? ` Selling fast: stock down ${(vel * 100).toFixed(0)}% in ${c.stealVelocityWindowHours}h.` : '';
-      notify(`${cfg.name}: -${gapPct}% STEAL`, `$${price.toFixed(2)} from ${lowest.seller}.${velNote}${ctx}`, url);
+      notify(`${cfg.name}: -${gapPct}% STEAL`, `$${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}.${velNote}${ctx}`, url);
       await set({ [KEY.steal(id)]: price });
     }
     return true;
@@ -223,21 +223,21 @@ async function checkThresholdLadder(id, cfg, lowest, price, stealFired, ctx, url
   if (highTier >= 0) {
     if (highTier > lastHighTier) {
       // stepped up to a NEW, higher spike marker
-      notify(`${cfg.name}: SPIKE ≥$${highs[highTier].toFixed(2)} (${highTier + 1}/${highs.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: SPIKE ≥$${highs[highTier].toFixed(2)} (${highTier + 1}/${highs.length})`, `$${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}.${ctx}`, url);
       fired = true;
     } else if (highTier === lastHighTier && cooldownPassed) {
       // still sitting at the highest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≥$${highs[highTier].toFixed(2)}`, `$${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}.${ctx}`, url);
       fired = true;
     }
   } else if (lowTier >= 0 && !stealFired) {
     if (lowTier > lastLowTier) {
       // stepped down to a NEW, deeper marker
-      notify(`${cfg.name}: DROP ≤$${lows[lowTier].toFixed(2)} (${lowTier + 1}/${lows.length})`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: DROP ≤$${lows[lowTier].toFixed(2)} (${lowTier + 1}/${lows.length})`, `$${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}.${ctx}`, url);
       fired = true;
     } else if (lowTier === lastLowTier && cooldownPassed) {
       // still sitting at the deepest marker — re-ping on the backoff
-      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)}`, `$${price.toFixed(2)} from ${lowest.seller}.${ctx}`, url);
+      notify(`${cfg.name}: still ≤$${lows[lowTier].toFixed(2)}`, `$${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}.${ctx}`, url);
       fired = true;
     }
   }
@@ -275,6 +275,6 @@ async function maybeDailySnapshot(id, cfg, price, lowest, ctxLines, url) {
     return; // already sent today's
   }
   await set({ [KEY.snapDay(id)]: today });
-  const lead = `Lowest $${price.toFixed(2)} from ${lowest.seller}`;
+  const lead = `Lowest $${price.toFixed(2)} @${lowest.seller}${sellerTrust(lowest)}`;
   notify(`${cfg.name}: snapshot`, [lead, ...ctxLines].join('\n'), url);
 }

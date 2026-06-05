@@ -9,6 +9,10 @@
     listingItem: '.listing-item',
     listingPrice: '.listing-item__listing-data__info__price',
     sellerName: '.seller-info__name',
+    sellerInfo: '.seller-info',
+    sellerRating: '.seller-info__rating',
+    sellerSales: '.seller-info__sales',
+    sellerBadge: '.seller-info__content img[alt]',
     upperPrice: '.price-points__upper__price',
     salesPrice: '.sales-data__price',
     chartsChange: '.charts-change',
@@ -64,11 +68,42 @@
       }
 
       const sellerEl = li.querySelector(SELECTORS.sellerName);
+
+      // Seller trust signals (rating %, lifetime sales, badges like Gold Star /
+      // Direct). Each is best-effort — missing fields stay null so a partial
+      // render never blanks the price line.
+      const infoEl = li.querySelector(SELECTORS.sellerInfo);
+      let rating = null;
+      let sales = null;
+      let badges = [];
+      if (infoEl) {
+        const ratingEl = infoEl.querySelector(SELECTORS.sellerRating);
+        if (ratingEl) {
+          const rm = (ratingEl.textContent || '').match(/(\d+(?:\.\d+)?)/);
+          if (rm) {
+            rating = parseFloat(rm[1]);
+          }
+        }
+        const salesEl = infoEl.querySelector(SELECTORS.sellerSales);
+        if (salesEl) {
+          const sm = (salesEl.textContent || '').replace(/,/g, '').match(/(\d+)/);
+          if (sm) {
+            sales = parseInt(sm[1], 10);
+          }
+        }
+        badges = Array.from(infoEl.querySelectorAll(SELECTORS.sellerBadge))
+          .map((img) => (img.getAttribute('alt') || '').trim())
+          .filter(Boolean);
+      }
+
       out.push({
         item,
         shipping,
         total: +(item + shipping).toFixed(2),
         seller: sellerEl ? sellerEl.textContent.trim() : 'Unknown seller',
+        rating,
+        sales,
+        badges,
       });
     });
 

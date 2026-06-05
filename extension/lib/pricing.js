@@ -100,6 +100,28 @@ export function fmtWindow(days, wd) {
   return `${label}: ${dir} ${Math.abs(wd.pct * 100).toFixed(1)}%`;
 }
 
+// Format a listing's seller trust signals into an alert suffix appended after
+// the seller name: a ✅ when the seller carries any trust badge (Gold Star,
+// Direct, ...), then rating % and lifetime sales. Returns e.g.
+// " ✅ 100% (1820 sales)" (badged) or " 100% (4 sales)" (plain), or '' when no
+// signals are present, so callers can append it unconditionally.
+export function sellerTrust(listing) {
+  if (!listing) {
+    return '';
+  }
+  const parts = [];
+  if (Array.isArray(listing.badges) && listing.badges.length) {
+    parts.push('✅');
+  }
+  if (listing.rating != null) {
+    parts.push(`${listing.rating}%`);
+  }
+  if (listing.sales != null) {
+    parts.push(`(${listing.sales} sales)`);
+  }
+  return parts.length ? ` ${parts.join(' ')}` : '';
+}
+
 // Trend windows to report for a product: its own override if set, else global.
 export function trendWindows(cfg, globalConfig) {
   return (cfg && Array.isArray(cfg.trendWindowsDays) && cfg.trendWindowsDays.length)
