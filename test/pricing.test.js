@@ -128,6 +128,10 @@ test('sellerTrust shows ✅ for badged sellers, then rating and sales (or empty)
     sellerTrust({ rating: null, sales: 1820, badges: [] }),
     ' (1820 sales)', // partial render: rating not yet parsed
   );
+  assert.equal(
+    sellerTrust({ rating: 0, sales: null, badges: [] }),
+    ' 0%', // brand-new seller: "(NA Sales)" parses to null — drop the count, keep 0%
+  );
   assert.equal(sellerTrust({ rating: null, sales: null, badges: [] }), '');
   assert.equal(sellerTrust(null), '');
 });
